@@ -76,12 +76,23 @@ export default function JarvisPage() {
     setIsLoading(true);
 
     try {
-      // Enviar mensagem para n8n
-      const response = await sendMessage(userMessage.text);
+      // Obter usuário autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Enviar mensagem para n8n com dados do usuário
+      const response = await sendMessage(userMessage.text, user);
+      const data = await response.json();
       
+      if (!data.reply) {
+        throw new Error('Resposta inválida do servidor');
+      }
+
       const aiMessage: Message = {
         sender: 'ai',
-        text: response.message || response.text || "Desculpe, não consegui processar sua mensagem.",
+        text: data.reply,
         timestamp: new Date()
       };
 

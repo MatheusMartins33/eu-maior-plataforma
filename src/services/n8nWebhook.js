@@ -34,9 +34,10 @@ export async function initializeGuide(userData) {
 /**
  * Envia uma mensagem para a IA no n8n
  * @param {string} message - Mensagem do usuário
- * @returns {Promise<Object>} Resposta da IA
+ * @param {Object} user - Objeto do usuário autenticado
+ * @returns {Promise<Response>} Resposta da API
  */
-export async function sendMessage(message) {
+export async function sendMessage(message, user) {
   try {
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
@@ -45,7 +46,8 @@ export async function sendMessage(message) {
       },
       body: JSON.stringify({
         action: 'SEND_MESSAGE',
-        message: message
+        message: message,
+        user: user
       }),
     });
 
@@ -53,7 +55,7 @@ export async function sendMessage(message) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    return response;
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error);
     throw error;
