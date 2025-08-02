@@ -1,6 +1,6 @@
 // Serviço para comunicação com webhooks do n8n
 
-const N8N_WEBHOOK_URL = 'https://your-n8n-instance.com/webhook/eu-maior';
+const N8N_WEBHOOK_URL = 'https://c8211fd0efea.ngrok-free.app/webhook/EU_MAIOR';
 
 /**
  * Inicializa o guia da IA no n8n com os dados do usuário

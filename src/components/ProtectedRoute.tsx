@@ -30,7 +30,9 @@ export default function ProtectedRoute({
             .eq('id', user.id)
             .maybeSingle();
 
-          setHasProfile(!!(profile && (profile as any).full_name));
+          const profileComplete = !!(profile && (profile as any).full_name);
+          setHasProfile(profileComplete);
+          console.log('Profile check:', { userId: user.id, profileComplete, profile });
         }
       } catch (error) {
         console.error('Auth check error:', error);
@@ -43,6 +45,7 @@ export default function ProtectedRoute({
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
         setUser(session?.user ?? null);
         
         if (session?.user) {
@@ -52,7 +55,9 @@ export default function ProtectedRoute({
             .eq('id', session.user.id)
             .maybeSingle();
 
-          setHasProfile(!!(profile && (profile as any).full_name));
+          const profileComplete = !!(profile && (profile as any).full_name);
+          setHasProfile(profileComplete);
+          console.log('Profile check on auth change:', { userId: session.user.id, profileComplete, profile });
         } else {
           setHasProfile(false);
         }
@@ -76,15 +81,27 @@ export default function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  // If user needs onboarding but hasn't completed profile
+  console.log('ProtectedRoute decision:', { 
+    requiresOnboarding, 
+    hasProfile, 
+    userEmail: user.email 
+  });
+
+  // If this is the onboarding route and user doesn't have profile yet, allow access
   if (requiresOnboarding && !hasProfile) {
-    return <Navigate to="/onboarding" replace />;
+    return <>{children}</>;
   }
 
-  // If user is trying to access onboarding but already has profile
+  // If this is NOT the onboarding route but user doesn't have profile, redirect to onboarding
   if (!requiresOnboarding && !hasProfile) {
     return <Navigate to="/onboarding" replace />;
   }
 
+  // If this is the onboarding route but user already has profile, redirect to main app
+  if (requiresOnboarding && hasProfile) {
+    return <Navigate to="/jarvis" replace />;
+  }
+
+  // User has profile and is accessing main app - allow access
   return <>{children}</>;
 }
