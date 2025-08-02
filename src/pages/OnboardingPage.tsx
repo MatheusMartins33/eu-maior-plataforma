@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import AuthLayout from "@/layouts/AuthLayout";
+import { initializeGuide } from "@/services/n8nWebhook";
 
 export default function OnboardingPage() {
   const [fullName, setFullName] = useState("");
@@ -52,11 +53,32 @@ export default function OnboardingPage() {
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Perfil criado com sucesso!",
-          description: "Bem-vindo ao EU MAIOR.",
-        });
-        navigate("/jarvis");
+        // Após salvar o perfil com sucesso, inicializar a IA no n8n
+        try {
+          const userData = {
+            id: user.id,
+            full_name: fullName,
+            data_nascimento: dataNascimento,
+            hora_nascimento: horaNascimento,
+            local_nascimento: localNascimento,
+          };
+          
+          await initializeGuide(userData);
+          
+          toast({
+            title: "Perfil criado com sucesso!",
+            description: "Bem-vindo ao EU MAIOR. Sua IA pessoal foi inicializada.",
+          });
+          navigate("/jarvis");
+        } catch (n8nError) {
+          console.error('Erro na inicialização da IA:', n8nError);
+          toast({
+            title: "Perfil criado, mas houve um problema",
+            description: "Seu perfil foi salvo, mas não foi possível inicializar sua IA. Tente novamente mais tarde.",
+            variant: "destructive",
+          });
+          navigate("/jarvis");
+        }
       }
     } catch (error) {
       toast({
