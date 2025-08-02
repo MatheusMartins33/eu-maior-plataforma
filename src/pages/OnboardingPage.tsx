@@ -43,7 +43,7 @@ export default function OnboardingPage() {
           hora_nascimento: horaNascimento || null,
           local_nascimento: localNascimento || null,
           updated_at: new Date().toISOString(),
-        });
+        } as any);
 
       if (error) {
         toast({

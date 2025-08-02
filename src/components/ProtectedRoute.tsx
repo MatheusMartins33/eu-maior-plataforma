@@ -30,7 +30,7 @@ export default function ProtectedRoute({
             .eq('id', user.id)
             .maybeSingle();
 
-          setHasProfile(!!(profile && profile.full_name));
+          setHasProfile(!!(profile && (profile as any).full_name));
         }
       } catch (error) {
         console.error('Auth check error:', error);
@@ -52,7 +52,7 @@ export default function ProtectedRoute({
             .eq('id', session.user.id)
             .maybeSingle();
 
-          setHasProfile(!!(profile && profile.full_name));
+          setHasProfile(!!(profile && (profile as any).full_name));
         } else {
           setHasProfile(false);
         }
