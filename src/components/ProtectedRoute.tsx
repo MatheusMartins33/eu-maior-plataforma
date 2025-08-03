@@ -30,7 +30,7 @@ export default function ProtectedRoute({
             .eq('id', user.id)
             .maybeSingle();
 
-          const profileComplete = !!(profile && (profile as any).full_name);
+          const profileComplete = !!(profile && (profile as any).full_name?.trim());
           setHasProfile(profileComplete);
           console.log('Profile check:', { userId: user.id, profileComplete, profile });
         }
@@ -55,9 +55,14 @@ export default function ProtectedRoute({
             .eq('id', session.user.id)
             .maybeSingle();
 
-          const profileComplete = !!(profile && (profile as any).full_name);
+          const profileComplete = !!(profile && (profile as any).full_name?.trim());
           setHasProfile(profileComplete);
           console.log('Profile check on auth change:', { userId: session.user.id, profileComplete, profile });
+          
+          // Força uma pequena espera para garantir que o estado seja atualizado
+          if (profileComplete) {
+            setTimeout(() => setLoading(false), 100);
+          }
         } else {
           setHasProfile(false);
         }
