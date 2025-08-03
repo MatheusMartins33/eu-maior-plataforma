@@ -37,6 +37,10 @@ export async function initializeGuide(userData) {
  */
 export async function sendMessage(message, user) {
   try {
+    // Timeout de segurança de 30 segundos
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch(N8N_CHAT_WEBHOOK_URL, {
       method: 'POST',
       headers: {
@@ -46,7 +50,10 @@ export async function sendMessage(message, user) {
         message: message,
         user: user
       }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -54,6 +61,9 @@ export async function sendMessage(message, user) {
 
     return await response.json();
   } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Timeout: A resposta da IA demorou muito para chegar');
+    }
     console.error('Erro ao enviar mensagem:', error);
     throw error;
   }

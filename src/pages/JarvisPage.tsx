@@ -83,15 +83,15 @@ export default function JarvisPage() {
       }
 
       // Enviar mensagem para n8n com dados do usuário
-      const data = await sendMessage(userMessage.text, user);
+      const response = await sendMessage(userMessage.text, user);
       
-      if (!data.reply) {
-        throw new Error('Resposta inválida do servidor');
+      if (!response || !response.reply) {
+        throw new Error("Resposta da IA em formato inválido.");
       }
 
       const aiMessage: Message = {
         sender: 'ai',
-        text: data.reply,
+        text: response.reply,
         timestamp: new Date()
       };
 
