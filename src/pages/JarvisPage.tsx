@@ -83,8 +83,7 @@ export default function JarvisPage() {
       }
 
       // Enviar mensagem para n8n com dados do usuário
-      const response = await sendMessage(userMessage.text, user);
-      const data = await response.json();
+      const data = await sendMessage(userMessage.text, user);
       
       if (!data.reply) {
         throw new Error('Resposta inválida do servidor');

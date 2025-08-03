@@ -1,6 +1,7 @@
 // Serviço para comunicação com webhooks do n8n
 
-const N8N_WEBHOOK_URL = 'https://c8211fd0efea.ngrok-free.app/webhook/EU_MAIOR';
+const N8N_ONBOARDING_WEBHOOK_URL = 'https://c8211fd0efea.ngrok-free.app/webhook/EU_MAIOR_ONBOARDING';
+const N8N_CHAT_WEBHOOK_URL = 'https://c8211fd0efea.ngrok-free.app/webhook/EU_MAIOR';
 
 /**
  * Inicializa o guia da IA no n8n com os dados do usuário
@@ -9,15 +10,12 @@ const N8N_WEBHOOK_URL = 'https://c8211fd0efea.ngrok-free.app/webhook/EU_MAIOR';
  */
 export async function initializeGuide(userData) {
   try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
+    const response = await fetch(N8N_ONBOARDING_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        action: 'INITIALIZE_GUIDE',
-        userData: userData
-      }),
+      body: JSON.stringify(userData),
     });
 
     if (!response.ok) {
@@ -39,13 +37,12 @@ export async function initializeGuide(userData) {
  */
 export async function sendMessage(message, user) {
   try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
+    const response = await fetch(N8N_CHAT_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        action: 'SEND_MESSAGE',
         message: message,
         user: user
       }),
@@ -55,7 +52,7 @@ export async function sendMessage(message, user) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return response;
+    return await response.json();
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error);
     throw error;
