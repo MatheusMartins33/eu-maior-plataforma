@@ -147,7 +147,9 @@ export default function OnboardingPage() {
             data_nascimento: dataNascimento,
             hora_nascimento: horaNascimento,
             localNascimento: {
-              cidade: local.cidade,
+              // CORREÇÃO: Garante que a cidade seja enviada.
+              // Usa 'local.cidade' se disponível, senão extrai da string de exibição.
+              cidade: local.cidade || local.display.split(',')[0].trim(),
               estado: local.estado,
               pais: local.pais
             }
