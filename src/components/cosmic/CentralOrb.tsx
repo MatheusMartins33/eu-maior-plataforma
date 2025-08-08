@@ -1,5 +1,4 @@
 import React from "react";
-// ✅ TAREFA 1: Importar AnimatePresence
 import { motion, AnimatePresence } from "framer-motion";
 import { AIResponseDisplay } from "./AIResponseDisplay";
 
@@ -85,7 +84,6 @@ export const CentralOrb: React.FC<CentralOrbProps> = ({
   onTypewriterComplete,
 }) => {
 
-  // ✅ TAREFA 1: Condição para mostrar o display da IA
   const shouldShowResponse = aiState === "responding" || aiState === "thinking" || aiState === "listening";
 
   return (
@@ -123,7 +121,6 @@ export const CentralOrb: React.FC<CentralOrbProps> = ({
           transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
         />
 
-        {/* ✅ TAREFA 1: Envolver o AIResponseDisplay com AnimatePresence e uma condição */}
         <AnimatePresence>
           {shouldShowResponse && (
             <AIResponseDisplay 
@@ -156,7 +153,8 @@ export const CentralOrb: React.FC<CentralOrbProps> = ({
       )}
       {(aiState === "thinking" || aiState === "responding") && (
         <motion.div
-          className="absolute inset-0"
+          // ✅ CORREÇÃO: Adicionada a classe 'pointer-events-none' para permitir cliques através desta camada.
+          className="absolute inset-0 pointer-events-none"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1.5, opacity: [0, 0.6, 0] }}
           transition={{ duration: 1.5, repeat: Infinity }}

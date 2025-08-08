@@ -1,11 +1,12 @@
 /* -------------------------------------------------------------------------- */
-/*  JarvisPage.tsx – Versão Sincronizada com Controle de Estado Perfeito     */
+/*  JarvisPage.tsx – Versão Refatorada com Correções de UI e Estado          */
 /* -------------------------------------------------------------------------- */
 
 import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -259,13 +260,9 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
 
   // Se for Desktop ou Tablet, renderiza os controles nos cantos superiores
   return (
-    // ✅ CORREÇÃO 1: Wrapper com z-index para garantir que os botões fiquem acima de outros elementos com z-index menor
     <div className="relative z-50">
-            {/* Botão de Conversação - Esquerda (COM MELHORIAS DE UX) */}
+      {/* Botão de Conversação - Esquerda */}
       <motion.button
-        // ✅ NÍVEL 1: Estilo Visual Aprimorado
-        // Trocamos o fundo cinza por um gradiente azul e adicionamos uma borda sutil.
-        // O ícone agora tem uma cor azul clara para mais destaque.
         className={`fixed top-6 left-6 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
           conversationActive 
             ? 'bg-blue-600/80 text-white shadow-lg shadow-blue-500/25' 
@@ -273,15 +270,8 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && onToggleConversation()}
         disabled={disabled}
-        
-        // ✅ NÍVEL 3: Feedback de Interação Aprimorado
-        // Aumentamos a escala e o brilho no hover para uma resposta mais satisfatória.
         whileHover={!disabled ? { scale: 1.1, boxShadow: "0 0 20px rgba(59, 130, 246, 0.6)" } : {}}
         whileTap={!disabled ? { scale: 0.95 } : {}}
-        
-        // ✅ NÍVEL 2: Microanimação Contínua
-        // Adicionamos uma animação de pulso perpétua na escala e no brilho (boxShadow),
-        // usando a cor azul para manter a identidade visual.
         animate={{
           scale: [1, 1.05, 1],
           boxShadow: [
@@ -291,7 +281,7 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
           ]
         }}
         transition={{
-          duration: 3.5, // Duração um pouco diferente para criar um ritmo assíncrono
+          duration: 3.5,
           repeat: Infinity,
           ease: "easeInOut"
         }}
@@ -300,11 +290,8 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
         <MessageSquare className="w-5 h-5" />
       </motion.button>
 
-            {/* Botão de Energia Astral - Direita (COM MELHORIAS DE UX) */}
+      {/* Botão de Energia Astral - Direita */}
       <motion.button
-        // ✅ NÍVEL 1: Estilo Visual Aprimorado
-        // Trocamos o fundo cinza por um gradiente roxo/azul e adicionamos uma borda sutil
-        // e mudamos a cor do ícone para um roxo claro, dando mais vida ao estado padrão.
         className={`fixed top-6 right-40 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
           astralDataActive 
             ? 'bg-purple-600/80 text-white shadow-lg shadow-purple-500/25' 
@@ -312,15 +299,8 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && onToggleAstralData()}
         disabled={disabled}
-        
-        // ✅ NÍVEL 3: Feedback de Interação Aprimorado
-        // Aumentamos a escala no hover e adicionamos um brilho mais forte para uma resposta mais satisfatória.
         whileHover={!disabled ? { scale: 1.1, boxShadow: "0 0 20px rgba(147, 51, 234, 0.6)" } : {}}
         whileTap={!disabled ? { scale: 0.95 } : {}}
-        
-        // ✅ NÍVEL 2: Microanimação Contínua
-        // Adicionamos uma animação de pulso perpétua na escala e no brilho (boxShadow)
-        // para que o botão pareça estar "vivo" e cheio de energia.
         animate={{
           scale: [1, 1.05, 1],
           boxShadow: [
@@ -342,13 +322,8 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
   );
 }
 
-
-
-// ✅ REMOVIDO: O componente local `ResponsivePanel` e sua interface foram removidos
-// para evitar conflito de animação.
-
 /* -------------------------------------------------------------------------- */
-/* COMPONENTE PRINCIPAL COM SINCRONIZAÇÃO PERFEITA                           */
+/* COMPONENTE PRINCIPAL COM CORREÇÕES DE ESTADO E UI                         */
 /* -------------------------------------------------------------------------- */
 function JarvisPageContent() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -362,6 +337,9 @@ function JarvisPageContent() {
   const { toast } = useToast();
   const { user } = useProfile();
   const { device } = useResponsive();
+
+  // ✅ CORREÇÃO 2: Flag para evitar múltiplos carregamentos
+  const messagesLoadedRef = useRef<string | null>(null);
 
   const getOrCreateSessionId = useCallback(() => {
     if (!user?.id) return null;
@@ -397,12 +375,22 @@ function JarvisPageContent() {
     [user?.id]
   );
 
+  // ✅ CORREÇÃO 2: useEffect melhorado para carregamento do estado
   useEffect(() => {
-    if (user?.id) {
-      getOrCreateSessionId();
-      const msgs = loadMessages();
-      if (msgs.length) setMessages(msgs);
+    // Guarda de segurança: só carrega se o user.id estiver presente
+    if (!user?.id) return;
+    
+    // Flag para evitar múltiplos carregamentos para o mesmo usuário
+    if (messagesLoadedRef.current === user.id) return;
+    
+    getOrCreateSessionId();
+    const msgs = loadMessages();
+    if (msgs.length) {
+      setMessages(msgs);
     }
+    
+    // Marca que já carregou para este usuário
+    messagesLoadedRef.current = user.id;
   }, [user?.id, getOrCreateSessionId, loadMessages]);
 
   useEffect(() => {
@@ -541,6 +529,23 @@ function JarvisPageContent() {
         intensity="low" 
         starCount={device === 'mobile' ? 15 : 25} 
       />
+      
+      {/* ✅ CORREÇÃO 1: Movido para cima no DOM e ajustado z-index para z-30 */}
+      {aiState !== "idle" && aiState !== "ready" && (
+        <motion.div
+          className={`fixed ${device === 'mobile' ? 'top-24' : 'top-32'} left-1/2 -translate-x-1/2 text-white/80 ${getResponsiveFontSize(device, 'sm')} font-medium z-30`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+        >
+          {aiState === "thinking" && "Refletindo profundamente..."}
+          {aiState === "listening" && "Ouvindo sua energia..."}
+          {aiState === "responding" && "Preparando sua resposta..."}
+          {aiState === "typewriting" && "✨ Foque na leitura - controles ocultos"}
+          {aiState === "contemplating" && "Absorva esta sabedoria..."}
+        </motion.div>
+      )}
+      
       <AnimatePresence>
         {isReadingMode && (
           <motion.div
@@ -565,6 +570,7 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
+      
       <AnimatePresence>
         {!isReadingMode && (
           <motion.div
@@ -583,6 +589,7 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
+      
       <AnimatePresence>
         {!isReadingMode && (
           <motion.div 
@@ -620,6 +627,7 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
+      
       <div className="flex-1 flex items-center justify-center px-4">
         <ResponsiveOrbContainer>
           <CentralOrb
@@ -633,20 +641,7 @@ function JarvisPageContent() {
             onTypewriterComplete={handleTypewriterComplete}
           />
         </ResponsiveOrbContainer>
-        {aiState !== "idle" && aiState !== "ready" && (
-          <motion.div
-            className={`absolute ${device === 'mobile' ? 'mt-32' : 'mt-48'} text-white/80 ${getResponsiveFontSize(device, 'sm')} font-medium`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            {aiState === "thinking" && "Refletindo profundamente..."}
-            {aiState === "listening" && "Ouvindo sua energia..."}
-            {aiState === "responding" && "Preparando sua resposta..."}
-            {aiState === "typewriting" && "✨ Foque na leitura - controles ocultos"}
-            {aiState === "contemplating" && "Absorva esta sabedoria..."}
-          </motion.div>
-        )}
+        
         {aiState === "ready" && (
           <motion.div
             className={`absolute ${device === 'mobile' ? 'mt-32' : 'mt-48'} text-white/90 ${getResponsiveFontSize(device, 'sm')} font-medium`}
@@ -662,6 +657,7 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </div>
+      
       <AnimatePresence>
         {!isReadingMode && (
           <motion.div
@@ -685,7 +681,6 @@ function JarvisPageContent() {
         )}
       </AnimatePresence>
       
-      {/* ✅ CORRIGIDO: Chamando OrbitalPanel diretamente */}
       <OrbitalPanel
         position="left"
         content="conversations"

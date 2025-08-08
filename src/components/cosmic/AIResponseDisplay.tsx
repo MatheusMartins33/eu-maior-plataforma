@@ -7,11 +7,11 @@ import {
   Loader2, 
   ChevronRight, 
   FastForward,
-  Square
+  X // ✅ CORREÇÃO: Importado o ícone de 'X'
 } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
-/* INTERFACES                                                                 */
+/* INTERFACES (Sem alterações)                                                */
 /* -------------------------------------------------------------------------- */
 interface AIResponseDisplayProps {
   messages: { id: string; text: string }[];
@@ -46,16 +46,24 @@ const ControlledTypewriter: React.FC<ControlledTypewriterProps> = ({
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    if (!isActive) {
-      setDisplayedText('');
-      setCurrentIndex(0);
-      setIsComplete(false);
-      return;
-    }
-    if (currentIndex < text.length && isActive) {
+    setDisplayedText('');
+    setCurrentIndex(0);
+    setIsComplete(false);
+  }, [text, isActive]);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    if (currentIndex < text.length) {
       const currentChar = text[currentIndex];
       let charSpeed = speed;
-      if (currentChar === '.') charSpeed = 400; else if (currentChar === ',') charSpeed = 200; else if (currentChar === '!') charSpeed = 450; else if (currentChar === '?') charSpeed = 450; else if (currentChar === ':') charSpeed = 250; else if (currentChar === ' ') charSpeed = 60;
+      if (currentChar === '.') charSpeed = 400; 
+      else if (currentChar === ',') charSpeed = 200; 
+      else if (currentChar === '!') charSpeed = 450; 
+      else if (currentChar === '?') charSpeed = 450; 
+      else if (currentChar === ':') charSpeed = 250; 
+      else if (currentChar === ' ') charSpeed = 60;
+      
       const timer = setTimeout(() => {
         setDisplayedText(prev => prev + text[currentIndex]);
         setCurrentIndex(prev => prev + 1);
@@ -67,11 +75,31 @@ const ControlledTypewriter: React.FC<ControlledTypewriterProps> = ({
     }
   }, [currentIndex, text, isActive, speed, onPageComplete, isComplete]);
 
+
   return (
-    <div className="text-white leading-relaxed" style={{ color: '#FFFFFF !important', textShadow: '0 2px 4px rgba(0, 0, 0, 1), 0 1px 2px rgba(0, 0, 0, 0.9)', fontWeight: '500', fontSize: '17px', lineHeight: '1.7', letterSpacing: '0.025em', whiteSpace: 'pre-wrap' }}>
+    <div 
+      className="text-white leading-relaxed" 
+      style={{ 
+        color: '#FFFFFF !important', 
+        textShadow: '0 2px 4px rgba(0, 0, 0, 1), 0 1px 2px rgba(0, 0, 0, 0.9)', 
+        fontWeight: '500', 
+        fontSize: '17px', 
+        lineHeight: '1.7', 
+        letterSpacing: '0.025em', 
+        whiteSpace: 'pre-wrap' 
+      }}
+    >
       {displayedText}
       {isActive && !isComplete && (
-        <motion.span className="inline-block w-0.5 h-6 ml-1" style={{ backgroundColor: '#60A5FA', boxShadow: '0 0 10px rgba(96, 165, 250, 0.8)' }} animate={{ opacity: [0, 1, 0] }} transition={{ duration: 1, repeat: Infinity }} />
+        <motion.span 
+          className="inline-block w-0.5 h-6 ml-1" 
+          style={{ 
+            backgroundColor: '#60A5FA', 
+            boxShadow: '0 0 10px rgba(96, 165, 250, 0.8)' 
+          }} 
+          animate={{ opacity: [0, 1, 0] }} 
+          transition={{ duration: 1, repeat: Infinity }} 
+        />
       )}
     </div>
   );
@@ -122,7 +150,7 @@ const TooltipButton: React.FC<{
 };
 
 /* -------------------------------------------------------------------------- */
-/* ✅ CARROSSEL COM LAYOUT E FUNCIONALIDADE CORRIGIDOS                        */
+/* CARROSSEL COM CONTROLE DE FECHAMENTO                                       */
 /* -------------------------------------------------------------------------- */
 const UserControlledCarousel: React.FC<UserControlledCarouselProps> = ({
   text,
@@ -130,18 +158,20 @@ const UserControlledCarousel: React.FC<UserControlledCarouselProps> = ({
 }) => {
   const [pages, setPages] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [currentPageComplete, setCurrentPageComplete] = useState(false);
   const [isSkippedToEnd, setIsSkippedToEnd] = useState(false);
   const [carouselComplete, setCarouselComplete] = useState(false);
 
   const onGlobalCompleteRef = useRef(onGlobalComplete);
-  useEffect(() => { onGlobalCompleteRef.current = onGlobalComplete; }, [onGlobalComplete]);
+  useEffect(() => { 
+    onGlobalCompleteRef.current = onGlobalComplete; 
+  }, [onGlobalComplete]);
 
   useEffect(() => {
     const maxCharsPerPage = 320;
     const sentences = text.split(/(?<=[.!?])\s+/);
     const pageArray: string[] = [];
     let currentPageText = "";
+    
     for (const sentence of sentences) {
       const potentialPage = currentPageText + (currentPageText ? " " : "") + sentence;
       if (potentialPage.length > maxCharsPerPage && currentPageText.length > 0) {
@@ -151,78 +181,144 @@ const UserControlledCarousel: React.FC<UserControlledCarouselProps> = ({
         currentPageText = potentialPage;
       }
     }
+    
     if (currentPageText) pageArray.push(currentPageText.trim());
     setPages(pageArray);
     setCurrentPage(0);
-    setCurrentPageComplete(false);
     setIsSkippedToEnd(false);
     setCarouselComplete(false);
   }, [text]);
 
-  const handleInteractionEnd = () => { if (!carouselComplete) { setCarouselComplete(true); onGlobalCompleteRef.current?.(); } };
-  const handlePageComplete = () => { setCurrentPageComplete(true); if (currentPage === pages.length - 1) { handleInteractionEnd(); } };
-  const nextPage = () => { if (currentPage < pages.length - 1) { setCurrentPage((prev) => prev + 1); setCurrentPageComplete(false); } };
-  const skipToEnd = () => { setIsSkippedToEnd(true); handleInteractionEnd(); };
+  const handleInteractionEnd = () => { 
+    if (!carouselComplete) { 
+      setCarouselComplete(true); 
+      onGlobalCompleteRef.current?.(); 
+    } 
+  };
+  
+  const handlePageComplete = () => { 
+    if (currentPage === pages.length - 1) { 
+      handleInteractionEnd(); 
+    } 
+  };
+  
+  const nextPage = () => { 
+    if (currentPage < pages.length - 1) { 
+      setCurrentPage((prev) => prev + 1); 
+    } 
+  };
+  
+  const skipToEnd = () => { 
+    setIsSkippedToEnd(true); 
+  };
+  
+  // ✅ CORREÇÃO: O timer automático foi removido.
+  // A finalização agora é controlada pelo botão de fechar.
 
   if (pages.length === 0) return null;
 
-  if (isSkippedToEnd) {
-    return (
-      <motion.div className="w-full max-h-[60vh] overflow-y-auto space-y-4 cosmic-scrollbar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-        <div className="text-white leading-relaxed" style={{ color: "#FFFFFF !important", textShadow: "0 2px 4px rgba(0, 0, 0, 1), 0 1px 2px rgba(0, 0, 0, 0.9)", fontWeight: "500", fontSize: "17px", lineHeight: "1.7", letterSpacing: "0.025em" }}>{text}</div>
-        <motion.div className="text-center py-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <div className="inline-flex items-center space-x-2 px-4 py-2 bg-green-500/20 border border-green-500/40 rounded-full text-sm" style={{ color: "#FFFFFF !important", textShadow: "0 1px 2px rgba(0, 0, 0, 1)" }}><Square className="w-4 h-4 fill-current" /><span>Mensagem completa exibida</span></div>
-        </motion.div>
-      </motion.div>
-    );
-  }
-
   return (
     <div className="w-full flex flex-col space-y-4">
-      <div className="min-h-[220px] flex items-start">
-        <ControlledTypewriter text={pages[currentPage]} isActive={!carouselComplete} speed={100} onPageComplete={handlePageComplete} />
-      </div>
-      <motion.div className="w-full pt-4 border-t border-gray-700/50 flex flex-col space-y-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-        {/* Linha 1: Barra de Progresso e Contador */}
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center space-x-2">
-            {pages.map((_, index) => (
-              <motion.div
-                key={index}
-                className={`h-1.5 rounded-full transition-colors duration-300 ${ index < currentPage ? "bg-blue-500/50" : index === currentPage ? "bg-blue-400" : "bg-gray-600" }`}
-                animate={{ width: index === currentPage ? 20 : 6 }}
+      <AnimatePresence mode="wait">
+        {!isSkippedToEnd ? (
+          <motion.div
+            key="paginated-view"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="min-h-[220px] flex items-start">
+              <ControlledTypewriter 
+                text={pages[currentPage]} 
+                isActive={!carouselComplete} 
+                speed={100} 
+                onPageComplete={handlePageComplete} 
               />
-            ))}
-          </div>
-          <span className="text-xs text-gray-400 font-mono">
-            {currentPage + 1}/{pages.length}
-          </span>
-        </div>
-        {/* ✅ LINHA 2 CORRIGIDA: Estrutura Flexbox Robusta */}
-        <div className="flex items-center justify-between w-full min-h-[40px]">
-          <div className="flex-grow">
-            <span className="text-sm text-gray-500 font-medium">
-              {!carouselComplete ? "Preparando sua resposta..." : "Mensagem completa!"}
-            </span>
-          </div>
-          <div className="flex-shrink-0 flex items-center space-x-2">
-            {!carouselComplete && (
-              <TooltipButton tooltip="Ver Tudo" onClick={skipToEnd}>
-                <FastForward className="w-5 h-5" />
-              </TooltipButton>
-            )}
-            {currentPage < pages.length - 1 && (
-              <TooltipButton
-                tooltip="Próxima"
-                onClick={nextPage}
-                disabled={!currentPageComplete}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </TooltipButton>
-            )}
-          </div>
-        </div>
-      </motion.div>
+            </div>
+            
+            <motion.div 
+              className="w-full pt-4 border-t border-gray-700/50 flex flex-col space-y-3" 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              transition={{ delay: 0.5 }}
+            >
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center space-x-2">
+                  {pages.map((_, index) => (
+                    <motion.div 
+                      key={index} 
+                      className={`h-1.5 rounded-full transition-colors duration-300 ${
+                        index < currentPage 
+                          ? "bg-blue-500/50" 
+                          : index === currentPage 
+                          ? "bg-blue-400" 
+                          : "bg-gray-600"
+                      }`} 
+                      animate={{ width: index === currentPage ? 20 : 6 }} 
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-gray-400 font-mono">
+                  {currentPage + 1}/{pages.length}
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-end w-full min-h-[40px]">
+                <div className="flex-shrink-0 flex items-center space-x-2">
+                  {!carouselComplete && (
+                    <TooltipButton tooltip="Ver Tudo" onClick={skipToEnd}>
+                      <FastForward className="w-5 h-5" />
+                    </TooltipButton>
+                  )}
+                  {currentPage < pages.length - 1 && (
+                    <TooltipButton 
+                      tooltip="Próxima" 
+                      onClick={nextPage}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </TooltipButton>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="full-view"
+            className="relative w-full max-h-[60vh] overflow-y-auto cosmic-scrollbar p-4" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {/* ✅ CORREÇÃO: Adicionado o botão de fechar */}
+            <motion.button
+              onClick={handleInteractionEnd}
+              className="absolute top-3 right-3 p-2 rounded-full text-gray-400 hover:bg-gray-700/80 hover:text-white transition-colors z-10"
+              aria-label="Fechar"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1, transition: { delay: 0.5 } }}
+            >
+              <X className="w-5 h-5" />
+            </motion.button>
+
+            <div 
+              className="text-white leading-relaxed" 
+              style={{ 
+                color: "#FFFFFF !important", 
+                textShadow: "0 2px 4px rgba(0, 0, 0, 1), 0 1px 2px rgba(0, 0, 0, 0.9)", 
+                fontWeight: "500", 
+                fontSize: "17px", 
+                lineHeight: "1.7", 
+                letterSpacing: "0.025em" 
+              }}
+            >
+              {text}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -232,23 +328,99 @@ const UserControlledCarousel: React.FC<UserControlledCarouselProps> = ({
 /* -------------------------------------------------------------------------- */
 const SimplifiedLoadingIndicator: React.FC<{ state: string }> = ({ state }) => {
   const controls = useAnimation();
-  useEffect(() => { controls.start({ rotate: 360, transition: { duration: 3, repeat: Infinity, ease: "linear" } }); }, [controls]);
+  
+  useEffect(() => { 
+    controls.start({ 
+      rotate: 360, 
+      transition: { 
+        duration: 3, 
+        repeat: Infinity, 
+        ease: "linear" 
+      } 
+    }); 
+  }, [controls]);
+  
   const getStateInfo = (state: string) => {
     switch (state) {
-      case "listening": return { icon: MessageCircle, text: "Absorvendo sua energia...", glowColor: "rgba(34, 197, 94, 0.7)" };
-      case "thinking": return { icon: Brain, text: "Refletindo profundamente...", glowColor: "rgba(59, 130, 246, 0.7)" };
-      case "responding": return { icon: Sparkles, text: "Preparando sua resposta...", glowColor: "rgba(147, 51, 234, 0.7)" };
-      default: return { icon: Loader2, text: "Conectando com o cosmos...", glowColor: "rgba(156, 163, 175, 0.7)" };
+      case "listening": 
+        return { 
+          icon: MessageCircle, 
+          text: "Absorvendo sua energia...", 
+          glowColor: "rgba(34, 197, 94, 0.7)" 
+        };
+      case "thinking": 
+        return { 
+          icon: Brain, 
+          text: "Refletindo profundamente...", 
+          glowColor: "rgba(59, 130, 246, 0.7)" 
+        };
+      case "responding": 
+        return { 
+          icon: Sparkles, 
+          text: "Preparando sua resposta...", 
+          glowColor: "rgba(147, 51, 234, 0.7)" 
+        };
+      default: 
+        return { 
+          icon: Loader2, 
+          text: "Conectando com o cosmos...", 
+          glowColor: "rgba(156, 163, 175, 0.7)" 
+        };
     }
   };
+  
   const stateInfo = getStateInfo(state);
   const IconComponent = stateInfo.icon;
+  
   return (
-    <motion.div className="flex flex-col items-center space-y-6 p-8 rounded-3xl backdrop-blur-xl" style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', border: `2px solid ${stateInfo.glowColor}`, boxShadow: `0 0 40px ${stateInfo.glowColor}` }} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}>
-      <motion.div className="p-6 rounded-full" style={{ backgroundColor: stateInfo.glowColor, boxShadow: `0 0 30px ${stateInfo.glowColor}` }} animate={{ rotate: 360, scale: [1, 1.1, 1] }} transition={{ rotate: { duration: 3, repeat: Infinity, ease: "linear" }, scale: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}>
+    <motion.div 
+      className="flex flex-col items-center space-y-6 p-8 rounded-3xl backdrop-blur-xl" 
+      style={{ 
+        backgroundColor: 'rgba(0, 0, 0, 0.9)', 
+        border: `2px solid ${stateInfo.glowColor}`, 
+        boxShadow: `0 0 40px ${stateInfo.glowColor}` 
+      }} 
+      initial={{ scale: 0.8, opacity: 0 }} 
+      animate={{ scale: 1, opacity: 1 }} 
+      exit={{ scale: 0.8, opacity: 0 }} 
+      transition={{ duration: 0.8, ease: "easeOut" }}
+    >
+      <motion.div 
+        className="p-6 rounded-full" 
+        style={{ 
+          backgroundColor: stateInfo.glowColor, 
+          boxShadow: `0 0 30px ${stateInfo.glowColor}` 
+        }} 
+        animate={{ 
+          rotate: 360, 
+          scale: [1, 1.1, 1] 
+        }} 
+        transition={{ 
+          rotate: { 
+            duration: 3, 
+            repeat: Infinity, 
+            ease: "linear" 
+          }, 
+          scale: { 
+            duration: 3, 
+            repeat: Infinity, 
+            ease: "easeInOut" 
+          } 
+        }}
+      >
         <IconComponent className="w-10 h-10" style={{ color: '#FFFFFF' }} />
       </motion.div>
-      <motion.p className="text-center max-w-xs" style={{ color: '#FFFFFF !important', textShadow: '0 2px 4px rgba(0, 0, 0, 1)', fontSize: '18px', fontWeight: '500' }} animate={{ opacity: [0.7, 1, 0.7] }} transition={{ duration: 4, repeat: Infinity }}>
+      <motion.p 
+        className="text-center max-w-xs" 
+        style={{ 
+          color: '#FFFFFF !important', 
+          textShadow: '0 2px 4px rgba(0, 0, 0, 1)', 
+          fontSize: '18px', 
+          fontWeight: '500' 
+        }} 
+        animate={{ opacity: [0.7, 1, 0.7] }} 
+        transition={{ duration: 4, repeat: Infinity }}
+      >
         {stateInfo.text}
       </motion.p>
     </motion.div>
@@ -256,7 +428,7 @@ const SimplifiedLoadingIndicator: React.FC<{ state: string }> = ({ state }) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* COMPONENTE PRINCIPAL (Sem alterações)                                      */
+/* COMPONENTE PRINCIPAL (Sem alterações)                                    */
 /* -------------------------------------------------------------------------- */
 export const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({
   messages,
@@ -270,7 +442,9 @@ export const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({
 
   useEffect(() => {
     if (aiState === "responding" && lastMessage) {
-      const timer = setTimeout(() => { setShowContent(true); }, 500);
+      const timer = setTimeout(() => { 
+        setShowContent(true); 
+      }, 500);
       return () => clearTimeout(timer);
     } else {
       setShowContent(false);
@@ -281,20 +455,42 @@ export const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({
   const shouldShowResponseContent = aiState === "responding" && showContent;
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-8">
+    <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-8 z-40">
       <AnimatePresence mode="wait">
         {shouldShowLoadingState && (
-          <motion.div key="loading" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.5, ease: "easeOut" }}>
+          <motion.div 
+            key="loading" 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            exit={{ opacity: 0, scale: 0.9 }} 
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
             <SimplifiedLoadingIndicator state={aiState} />
           </motion.div>
         )}
+        
         {shouldShowResponseContent && (
-          <motion.div key="response" className="w-full max-w-2xl" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.7, ease: "easeOut" }}>
-            <div
-              className="relative p-6 sm:p-8 rounded-2xl"
-              style={{ backgroundColor: 'rgba(17, 24, 39, 0.9)', border: '1px solid rgba(59, 130, 246, 0.3)', boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.7)`, backdropFilter: 'blur(16px)' }}
+          <motion.div 
+            key="response" 
+            className="w-full max-w-2xl" 
+            initial={{ opacity: 0, scale: 0.95 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            exit={{ opacity: 0, scale: 0.95 }} 
+            transition={{ duration: 0.7, ease: "easeOut" }}
+          >
+            <div 
+              className="relative p-6 sm:p-8 rounded-2xl" 
+              style={{ 
+                backgroundColor: 'rgba(17, 24, 39, 0.9)', 
+                border: '1px solid rgba(59, 130, 246, 0.3)', 
+                boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.7)`, 
+                backdropFilter: 'blur(16px)' 
+              }}
             >
-              <UserControlledCarousel text={lastMessageText} onGlobalComplete={onTypewriterComplete} />
+              <UserControlledCarousel 
+                text={lastMessageText} 
+                onGlobalComplete={onTypewriterComplete} 
+              />
             </div>
           </motion.div>
         )}
