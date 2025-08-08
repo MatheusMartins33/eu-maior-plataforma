@@ -1,50 +1,74 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// src/App.tsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import JarvisPage from "./pages/JarvisPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { ProfileProvider } from "@/contexts/ProfileContext";
+import NavigationController from "@/components/NavigationController";
 
-const queryClient = new QueryClient();
+// páginas (pode usar React.lazy depois)
+import Index from "@/pages/Index";
+import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
+import OnboardingPage from "@/pages/OnboardingPage";
+import JarvisPage from "@/pages/JarvisPage";
+import NotFound from "@/pages/NotFound";
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { AuthState } from "@/types/auth";
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ProfileProvider>
+        {/* hook de redirecionamento global */}
+        <NavigationController />
+
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route 
-            path="/onboarding" 
+
+          <Route
+            path="/login"
             element={
-              <ProtectedRoute requiresOnboarding={true}>
+              <ProtectedRoute
+                requiresAuth={false}
+                allowedAuthStates={[AuthState.UNAUTHENTICATED]}
+              >
+                <LoginPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/register"
+            element={
+              <ProtectedRoute
+                requiresAuth={false}
+                allowedAuthStates={[AuthState.UNAUTHENTICATED]}
+              >
+                <RegisterPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute requiresProfile={false}>
                 <OnboardingPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/jarvis" 
+
+          <Route
+            path="/jarvis"
             element={
               <ProtectedRoute>
                 <JarvisPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
-export default App;
+      </ProfileProvider>
+    </BrowserRouter>
+  );
+}

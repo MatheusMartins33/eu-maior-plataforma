@@ -16,27 +16,42 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          cidade_nascimento: string | null
           data_nascimento: string | null
+          estado_nascimento: string | null
           full_name: string | null
+          fuso_horario_nascimento: string | null
           hora_nascimento: string | null
           id: string
           local_nascimento: string | null
+          pais_nascimento: string | null
+          status: string | null
           updated_at: string | null
         }
         Insert: {
+          cidade_nascimento?: string | null
           data_nascimento?: string | null
+          estado_nascimento?: string | null
           full_name?: string | null
+          fuso_horario_nascimento?: string | null
           hora_nascimento?: string | null
           id: string
           local_nascimento?: string | null
+          pais_nascimento?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Update: {
+          cidade_nascimento?: string | null
           data_nascimento?: string | null
+          estado_nascimento?: string | null
           full_name?: string | null
+          fuso_horario_nascimento?: string | null
           hora_nascimento?: string | null
           id?: string
           local_nascimento?: string | null
+          pais_nascimento?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: []

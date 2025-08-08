@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AuthLayout from "@/layouts/AuthLayout";
+import { useProfile } from "@/contexts/ProfileContext";
 import { initializeGuide } from "@/services/n8nWebhook";
+import { ProfileStatus } from "@/types/profile";
+import AuthLayout from "@/layouts/AuthLayout";
 
 interface LocalNascimento {
   display: string;
@@ -33,8 +33,8 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>();
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateProfile, user } = useProfile();
 
   // Função para buscar locais na API Nominatim
   const searchLocations = async (query: string) => {
@@ -56,12 +56,18 @@ export default function OnboardingPage() {
 
       const results = await response.json();
       
-      const formattedSuggestions: Suggestion[] = results.map((result: any) => ({
-        display: result.display_name,
-        cidade: result.address?.city || result.address?.town || result.address?.village || '',
-        estado: result.address?.state || '',
-        pais: result.address?.country || ''
-      }));
+      const formattedSuggestions: Suggestion[] = results.map((result: any) => {
+        const cidade = result.address?.city || result.address?.town || result.address?.village || result.address?.municipality || '';
+        const estado = result.address?.state || result.address?.province || result.address?.region || '';
+        const pais = result.address?.country || '';
+
+        return {
+          display: result.display_name,
+          cidade,
+          estado,
+          pais
+        };
+      });
 
       setSuggestions(formattedSuggestions);
       setShowSuggestions(true);
@@ -104,84 +110,205 @@ export default function OnboardingPage() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // 🔧 FUNÇÃO MELHORADA DE EXTRAÇÃO DE LOCALIZAÇÃO
+  const extractLocationData = (locationString: string): { cidade: string, estado: string, pais: string } => {
+    if (!locationString?.trim()) {
+      return { cidade: '', estado: '', pais: '' };
+    }
+    
+    try {
+      const parts = locationString.split(',').map(part => part.trim()).filter(Boolean);
+      
+      if (parts.length === 0) {
+        return { cidade: '', estado: '', pais: '' };
+      }
+      
+      // Estratégia: primeiro item é cidade, último é país, penúltimo é estado
+      const cidade = parts[0] || '';
+      const pais = parts[parts.length - 1] || '';
+      const estado = parts.length > 2 ? parts[parts.length - 2] : '';
+      
+      return { cidade, estado, pais };
+    } catch (error) {
+      console.error('Erro ao extrair dados de localização:', error);
+      return { cidade: '', estado: '', pais: '' };
+    }
+  };
+
+  // 🔧 VALIDAÇÃO COMPLETA - TODOS OS CAMPOS OBRIGATÓRIOS
+  const validateForm = (): { isValid: boolean; message: string } => {
+    // Nome completo obrigatório
+    if (!fullName.trim()) {
+      return {
+        isValid: false,
+        message: "Nome completo é obrigatório."
+      };
+    }
+
+    // Nome deve ter pelo menos 2 palavras
+    if (fullName.trim().split(' ').length < 2) {
+      return {
+        isValid: false,
+        message: "Por favor, informe seu nome completo (nome e sobrenome)."
+      };
+    }
+
+    // Data de nascimento obrigatória
+    if (!dataNascimento) {
+      return {
+        isValid: false,
+        message: "Data de nascimento é obrigatória."
+      };
+    }
+
+    // Hora de nascimento obrigatória
+    if (!horaNascimento) {
+      return {
+        isValid: false,
+        message: "Hora de nascimento é obrigatória."
+      };
+    }
+
+    // Local de nascimento obrigatório
+    if (!local.display.trim()) {
+      return {
+        isValid: false,
+        message: "Local de nascimento é obrigatório."
+      };
+    }
+
+    return { isValid: true, message: "" };
+  };
+
+  // 🔧 LÓGICA DE SUBMISSÃO CORRIGIDA
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Verificar autenticação
+    if (!user) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Usuário não encontrado. Por favor, faça login novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validação simples do formulário
+    const validation = validateForm();
+    if (!validation.isValid) {
+      toast({
+        title: "Dados inválidos",
+        description: validation.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Erro de autenticação",
-          description: "Usuário não encontrado.",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
+      // 🔧 PREPARAR DADOS DE LOCALIZAÇÃO DE FORMA MAIS ROBUSTA
+      let cidade = local.cidade || '';
+      let estado = local.estado || '';
+      let pais = local.pais || '';
+
+      // Se os campos estruturados estão vazios, tentar extrair da string de display
+      if (local.display && (!cidade || !estado || !pais)) {
+        const extracted = extractLocationData(local.display);
+        cidade = cidade || extracted.cidade;
+        estado = estado || extracted.estado;
+        pais = pais || extracted.pais;
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: fullName,
-          data_nascimento: dataNascimento || null,
-          hora_nascimento: horaNascimento || null,
-          local_nascimento: local.display || null,
-          updated_at: new Date().toISOString(),
-        } as any);
+      // 🔧 PREPARAR DADOS DO PERFIL - TODOS OBRIGATÓRIOS
+      const profileData = {
+        full_name: fullName.trim(),
+        data_nascimento: dataNascimento, // Obrigatório
+        hora_nascimento: horaNascimento, // Obrigatório
+        local_nascimento: local.display, // Obrigatório
+        cidade_nascimento: cidade || null,
+        estado_nascimento: estado || null,
+        pais_nascimento: pais || null,
+        status: ProfileStatus.COMPLETED,
+      };
 
-      if (error) {
+      // 🔧 DEBUG: Log dos dados que serão enviados
+      console.log('📝 Dados do perfil sendo enviados:', {
+        ...profileData,
+        user_id: user.id,
+        email: user.email
+      });
+
+      // 🔧 SALVAR PERFIL
+      const success = await updateProfile(profileData);
+
+      if (success) {
+        // 🔧 SUCESSO: Mostrar toast e disparar webhook
         toast({
-          title: "Erro ao salvar perfil",
-          description: error.message,
-          variant: "destructive",
+          title: "Perfil criado com sucesso!",
+          description: "Bem-vindo ao EU MAIOR.",
         });
-      } else {
-        // Após salvar o perfil com sucesso, inicializar a IA no n8n
+
+        // 🔧 DISPARAR WEBHOOK N8N COM TODOS OS DADOS NO FORMATO CORRETO
         try {
-          const userData = {
-            id: user.id,
-            full_name: fullName,
+          const webhookData = {
+            user_id: user.id,
+            email: user.email,
+            full_name: fullName.trim(),
             data_nascimento: dataNascimento,
             hora_nascimento: horaNascimento,
-            localNascimento: {
-              // CORREÇÃO: Garante que a cidade seja enviada.
-              // Usa 'local.cidade' se disponível, senão extrai da string de exibição.
-              cidade: local.cidade || local.display.split(',')[0].trim(),
-              estado: local.estado,
-              pais: local.pais
-            }
+            local_nascimento: local.display, // Campo completo mantido
+            cidade: cidade || '',            // ✅ cidade (não cidade_nascimento)
+            estado: estado || '',            // ✅ estado (não estado_nascimento)  
+            pais: pais || '',               // ✅ pais (não pais_nascimento)
+            created_at: new Date().toISOString()
           };
           
-          await initializeGuide(userData);
-          
-          toast({
-            title: "Perfil criado com sucesso!",
-            description: "Bem-vindo ao EU MAIOR. Sua IA pessoal foi inicializada.",
-          });
-          navigate("/jarvis");
-        } catch (n8nError) {
-          console.error('Erro na inicialização da IA:', n8nError);
-          toast({
-            title: "Perfil criado, mas houve um problema",
-            description: "Seu perfil foi salvo, mas não foi possível inicializar sua IA. Tente novamente mais tarde.",
-            variant: "destructive",
-          });
-          navigate("/jarvis");
+          console.log('🚀 Disparando webhook N8N com dados completos:', webhookData);
+          await initializeGuide(webhookData);
+          console.log('✅ N8N webhook disparado com sucesso');
+        } catch (webhookError) {
+          console.warn('⚠️ Erro ao disparar webhook N8N (não crítico):', webhookError);
+          // Não mostrar erro para o usuário, é um processo em background
         }
+        
+        // 🔧 REDIRECIONAMENTO AUTOMÁTICO
+        // O NavigationController detectará que o perfil está completo e redirecionará
+        console.log('✅ Perfil salvo, aguardando redirecionamento automático...');
+        
+      } else {
+        // 🔧 ERRO NO SALVAMENTO
+        toast({
+          title: "Erro ao salvar perfil",
+          description: "Não foi possível salvar suas informações. Verifique os dados e tente novamente.",
+          variant: "destructive",
+        });
+        
+        console.error('❌ Falha ao salvar perfil via updateProfile');
       }
+      
     } catch (error) {
+      // 🔧 ERRO INESPERADO
+      console.error('💥 Erro inesperado no handleSubmit:', error);
       toast({
         title: "Erro inesperado",
-        description: "Tente novamente mais tarde.",
+        description: "Ocorreu um problema técnico. Tente novamente em alguns instantes.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // 🔧 CLEANUP DO DEBOUNCE
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   return (
     <AuthLayout>
@@ -194,8 +321,11 @@ export default function OnboardingPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* 🔧 NOME COMPLETO - OBRIGATÓRIO */}
             <div className="space-y-2">
-              <Label htmlFor="fullName">Nome Completo *</Label>
+              <Label htmlFor="fullName">
+                Nome Completo <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="fullName"
                 type="text"
@@ -203,31 +333,47 @@ export default function OnboardingPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
+                maxLength={100}
+                disabled={isLoading}
               />
             </div>
             
+            {/* 🔧 DATA DE NASCIMENTO - OBRIGATÓRIO */}
             <div className="space-y-2">
-              <Label htmlFor="dataNascimento">Data de Nascimento</Label>
+              <Label htmlFor="dataNascimento">
+                Data de Nascimento <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="dataNascimento"
                 type="date"
                 value={dataNascimento}
                 onChange={(e) => setDataNascimento(e.target.value)}
+                disabled={isLoading}
+                required
+                max={new Date().toISOString().split('T')[0]} // Não permite datas futuras
               />
             </div>
             
+            {/* 🔧 HORA DE NASCIMENTO - OBRIGATÓRIO */}
             <div className="space-y-2">
-              <Label htmlFor="horaNascimento">Hora de Nascimento</Label>
+              <Label htmlFor="horaNascimento">
+                Hora de Nascimento <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="horaNascimento"
                 type="time"
                 value={horaNascimento}
                 onChange={(e) => setHoraNascimento(e.target.value)}
+                disabled={isLoading}
+                required
               />
             </div>
             
+            {/* 🔧 LOCAL DE NASCIMENTO - OBRIGATÓRIO */}
             <div className="space-y-2 relative">
-              <Label htmlFor="localNascimento">Local de Nascimento</Label>
+              <Label htmlFor="localNascimento">
+                Local de Nascimento <span className="text-destructive">*</span>
+              </Label>
               <div className="relative">
                 <Input
                   id="localNascimento"
@@ -236,6 +382,9 @@ export default function OnboardingPage() {
                   value={local.display}
                   onChange={(e) => handleLocationSearch(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
+                  disabled={isLoading}
+                  required
+                  maxLength={200}
                 />
                 {isSearching && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -244,6 +393,7 @@ export default function OnboardingPage() {
                 )}
               </div>
               
+              {/* 🔧 SUGESTÕES DE LOCALIZAÇÃO */}
               {showSuggestions && suggestions.length > 0 && (
                 <div className="absolute z-50 w-full bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto mt-1">
                   {suggestions.map((suggestion, index) => (
@@ -255,9 +405,32 @@ export default function OnboardingPage() {
                         selectSuggestion(suggestion);
                       }}
                     >
-                      <div className="text-sm font-medium">{suggestion.display}</div>
+                      <div className="text-sm font-medium truncate">{suggestion.display}</div>
                       {(suggestion.cidade || suggestion.estado || suggestion.pais) && (
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-xs text-muted-foreground mt-1 truncate">
+                          {[suggestion.cidade, suggestion.estado, suggestion.pais].filter(Boolean).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* 🔧 SUGESTÕES DE LOCALIZAÇÃO */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 w-full bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto mt-1">
+                  {suggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className="px-4 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer border-b border-border last:border-b-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectSuggestion(suggestion);
+                      }}
+                    >
+                      <div className="text-sm font-medium truncate">{suggestion.display}</div>
+                      {(suggestion.cidade || suggestion.estado || suggestion.pais) && (
+                        <div className="text-xs text-muted-foreground mt-1 truncate">
                           {[suggestion.cidade, suggestion.estado, suggestion.pais].filter(Boolean).join(', ')}
                         </div>
                       )}
@@ -267,9 +440,19 @@ export default function OnboardingPage() {
               )}
             </div>
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Salvando..." : "Completar Perfil"}
+            {/* 🔧 BOTÃO DE SUBMISSÃO */}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading || !fullName.trim() || !dataNascimento || !horaNascimento || !local.display.trim()}
+            >
+              {isLoading ? "Salvando perfil..." : "Completar Perfil"}
             </Button>
+            
+            {/* 🔧 INFORMAÇÃO ADICIONAL */}
+            <p className="text-xs text-center text-muted-foreground">
+              * Todos os campos são obrigatórios para personalizar sua experiência.
+            </p>
           </form>
         </CardContent>
       </Card>

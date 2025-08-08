@@ -1,0 +1,19 @@
+/* efeito vidro + sombra suave */
+.bg-glass-morphism{
+  @apply bg-white/10 backdrop-blur-md border border-white/10 shadow-lg rounded-3xl;
+}
+
+/* scrollbar Chrome / Edge / Safari */
+.cosmic-scrollbar::-webkit-scrollbar{
+  @apply w-1.5;
+}
+.cosmic-scrollbar::-webkit-scrollbar-thumb{
+  @apply bg-cosmic-purple/60 rounded-full;
+}
+
+/* scrollbar Firefox */
+.cosmic-scrollbar{
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.cosmic-purple') transparent;
+
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,36 +12,61 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
+
+  // All redirection logic removed - handled by NavigationController
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email.trim() || !password.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha email e senha.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password,
       });
 
       if (error) {
+        console.error('Login error:', error);
+        
+        let errorMessage = "Erro no login. Tente novamente.";
+        
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = "Email ou senha incorretos.";
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = "Por favor, confirme seu email antes de fazer login.";
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = "Muitas tentativas. Aguarde alguns minutos.";
+        }
+        
         toast({
           title: "Erro no login",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
-      } else {
+      } else if (data.user) {
+        console.log('Login successful for user:', data.user.id);
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta.",
         });
-        navigate("/jarvis");
+        // Redirecionamento será automático via NavigationController
       }
     } catch (error) {
+      console.error('Unexpected login error:', error);
       toast({
-        title: "Erro inesperado",
-        description: "Tente novamente mais tarde.",
+        title: "Erro de conexão",
+        description: "Verifique sua conexão com a internet e tente novamente.",
         variant: "destructive",
       });
     } finally {
