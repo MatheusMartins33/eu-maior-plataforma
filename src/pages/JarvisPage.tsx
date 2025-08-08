@@ -31,11 +31,8 @@ import {
   useResponsive,
   ResponsiveOrbContainer,
   ResponsiveInputContainer,
-  ResponsiveFloatingControls,
-  useResponsivePanelClasses,
   useResponsiveAnimation,
   getResponsiveFontSize,
-  getResponsiveSpacing,
 } from "@/components/cosmic/ResponsiveLayout";
 
 // Importar componentes existentes
@@ -74,7 +71,7 @@ interface ResponsiveInputProps {
   onSend: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   loading: boolean;
-  disabled: boolean; // ✅ NOVO: controle de desabilitação
+  disabled: boolean;
   placeholder?: string;
 }
 
@@ -87,13 +84,11 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
   disabled,
   placeholder = "Compartilhe sua jornada espiritual..."
 }) => {
-  const { device, layoutMode } = useResponsive();
+  const { device } = useResponsive();
   const [isFocused, setIsFocused] = useState(false);
-
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const [rows, setRows] = useState(1);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (inputRef.current) {
       const textarea = inputRef.current;
@@ -119,9 +114,7 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
 
   const canSend = !loading && !disabled && value.trim().length > 0;
   const isActive = isFocused || value.length > 0;
-
-  // Responsive classes
-  const containerPadding = device === 'mobile' ? 'p-3' : device === 'tablet' ? 'p-4' : 'p-4';
+  const containerPadding = device === 'mobile' ? 'p-3' : 'p-4';
   const textSize = device === 'mobile' ? 'text-base' : 'text-lg';
 
   return (
@@ -133,12 +126,9 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
           ? 'bg-gray-900/60 backdrop-blur-xl border-blue-400/50 shadow-lg shadow-blue-500/10' 
           : 'bg-gray-900/60 backdrop-blur-xl border-gray-600/30'
       }`}
-      animate={{
-        scale: isActive && !disabled ? 1.02 : 1,
-      }}
+      animate={{ scale: isActive && !disabled ? 1.02 : 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
     >
-      {/* Área de Input */}
       <div className="flex-1 relative">
         <textarea
           ref={inputRef}
@@ -161,8 +151,6 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
           }}
         />
       </div>
-
-      {/* Botão Enviar */}
       <div className={`flex items-center ${device === 'mobile' ? 'pr-2 pb-2' : 'pr-3 pb-3'}`}>
         <motion.button
           className={`${device === 'mobile' ? 'p-2' : 'p-2'} rounded-xl transition-all duration-200 ${
@@ -182,8 +170,6 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
           )}
         </motion.button>
       </div>
-
-      {/* Glow Effect quando ativo */}
       {isActive && !disabled && (
         <motion.div
           className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 pointer-events-none"
@@ -192,8 +178,6 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
           exit={{ opacity: 0 }}
         />
       )}
-
-      {/* Indicador de Estado Bloqueado */}
       {disabled && (
         <motion.div
           className="absolute inset-0 rounded-2xl bg-gradient-to-r from-gray-800/20 to-gray-900/20 pointer-events-none flex items-center justify-center"
@@ -218,7 +202,7 @@ interface ResponsiveControlsProps {
   onToggleAstralData: () => void;
   conversationActive: boolean;
   astralDataActive: boolean;
-  disabled: boolean; // ✅ NOVO: controle de desabilitação
+  disabled: boolean;
 }
 
 const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
@@ -228,15 +212,16 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
   astralDataActive,
   disabled
 }) => {
-  const { device, layoutMode } = useResponsive();
+  const { device } = useResponsive();
 
-  // Mobile: Menu drawer na parte inferior
+  // Se for mobile, renderiza os controles na parte inferior central
   if (device === 'mobile') {
     return (
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40">
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
         <div className={`flex space-x-3 bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-600/30 p-2 shadow-lg transition-opacity duration-300 ${
           disabled ? 'opacity-50' : 'opacity-100'
         }`}>
+          {/* Botão de Conversa (Mobile) */}
           <motion.button
             className={`p-3 rounded-xl transition-colors ${
               conversationActive 
@@ -252,6 +237,7 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
             <MessageSquare className="w-5 h-5" />
           </motion.button>
           
+          {/* Botão de Energia Astral (Mobile) */}
           <motion.button
             className={`p-3 rounded-xl transition-colors ${
               astralDataActive 
@@ -271,151 +257,112 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
     );
   }
 
-  // Desktop/Tablet: Controles nos cantos
+  // Se for Desktop ou Tablet, renderiza os controles nos cantos superiores
   return (
-    <>
-      {/* Botão de Conversação - Esquerda */}
+    // ✅ CORREÇÃO 1: Wrapper com z-index para garantir que os botões fiquem acima de outros elementos com z-index menor
+    <div className="relative z-50">
+            {/* Botão de Conversação - Esquerda (COM MELHORIAS DE UX) */}
       <motion.button
-        className={`fixed top-6 left-6 p-3 rounded-full backdrop-blur-sm transition-colors z-40 ${
+        // ✅ NÍVEL 1: Estilo Visual Aprimorado
+        // Trocamos o fundo cinza por um gradiente azul e adicionamos uma borda sutil.
+        // O ícone agora tem uma cor azul clara para mais destaque.
+        className={`fixed top-6 left-6 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
           conversationActive 
             ? 'bg-blue-600/80 text-white shadow-lg shadow-blue-500/25' 
-            : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+            : 'bg-gradient-to-br from-blue-600/50 to-cyan-600/50 text-blue-200 border border-blue-400/30 hover:shadow-blue-500/40'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && onToggleConversation()}
         disabled={disabled}
-        whileHover={!disabled ? { scale: 1.05 } : {}}
+        
+        // ✅ NÍVEL 3: Feedback de Interação Aprimorado
+        // Aumentamos a escala e o brilho no hover para uma resposta mais satisfatória.
+        whileHover={!disabled ? { scale: 1.1, boxShadow: "0 0 20px rgba(59, 130, 246, 0.6)" } : {}}
         whileTap={!disabled ? { scale: 0.95 } : {}}
+        
+        // ✅ NÍVEL 2: Microanimação Contínua
+        // Adicionamos uma animação de pulso perpétua na escala e no brilho (boxShadow),
+        // usando a cor azul para manter a identidade visual.
+        animate={{
+          scale: [1, 1.05, 1],
+          boxShadow: [
+            "0 0 8px rgba(59, 130, 246, 0.3)", 
+            "0 0 16px rgba(59, 130, 246, 0.5)", 
+            "0 0 8px rgba(59, 130, 246, 0.3)"
+          ]
+        }}
+        transition={{
+          duration: 3.5, // Duração um pouco diferente para criar um ritmo assíncrono
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
         title={disabled ? "Aguarde a resposta" : "Conversas"}
       >
         <MessageSquare className="w-5 h-5" />
       </motion.button>
 
-      {/* Dados astrais - Direita */}
+            {/* Botão de Energia Astral - Direita (COM MELHORIAS DE UX) */}
       <motion.button
-        className={`fixed top-6 right-20 p-3 rounded-full backdrop-blur-sm transition-colors z-40 ${
+        // ✅ NÍVEL 1: Estilo Visual Aprimorado
+        // Trocamos o fundo cinza por um gradiente roxo/azul e adicionamos uma borda sutil
+        // e mudamos a cor do ícone para um roxo claro, dando mais vida ao estado padrão.
+        className={`fixed top-6 right-40 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
           astralDataActive 
             ? 'bg-purple-600/80 text-white shadow-lg shadow-purple-500/25' 
-            : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+            : 'bg-gradient-to-br from-purple-600/50 to-blue-600/50 text-purple-200 border border-purple-400/30 hover:shadow-purple-500/40'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && onToggleAstralData()}
         disabled={disabled}
-        whileHover={!disabled ? { scale: 1.05 } : {}}
+        
+        // ✅ NÍVEL 3: Feedback de Interação Aprimorado
+        // Aumentamos a escala no hover e adicionamos um brilho mais forte para uma resposta mais satisfatória.
+        whileHover={!disabled ? { scale: 1.1, boxShadow: "0 0 20px rgba(147, 51, 234, 0.6)" } : {}}
         whileTap={!disabled ? { scale: 0.95 } : {}}
+        
+        // ✅ NÍVEL 2: Microanimação Contínua
+        // Adicionamos uma animação de pulso perpétua na escala e no brilho (boxShadow)
+        // para que o botão pareça estar "vivo" e cheio de energia.
+        animate={{
+          scale: [1, 1.05, 1],
+          boxShadow: [
+            "0 0 8px rgba(147, 51, 234, 0.3)", 
+            "0 0 16px rgba(147, 51, 234, 0.5)", 
+            "0 0 8px rgba(147, 51, 234, 0.3)"
+          ]
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
         title={disabled ? "Aguarde a resposta" : "Energia Astral"}
       >
         <Sparkles className="w-5 h-5" />
       </motion.button>
-    </>
+    </div>
   );
-};
-
-/* -------------------------------------------------------------------------- */
-/* PAINEL RESPONSIVO (sem alterações)                                        */
-/* -------------------------------------------------------------------------- */
-interface ResponsivePanelProps {
-  position: "left" | "right" | "bottom" | "center";
-  content: "conversations" | "astral-data";
-  isVisible: boolean;
-  onClose: () => void;
-  conversationProps?: any;
-  astralProps?: any;
 }
 
-const ResponsivePanel: React.FC<ResponsivePanelProps> = ({
-  position,
-  content,
-  isVisible,
-  onClose,
-  conversationProps,
-  astralProps
-}) => {
-  const { device, layoutMode } = useResponsive();
-  const animation = useResponsiveAnimation();
-  const panelClasses = useResponsivePanelClasses(position);
 
-  if (!isVisible) return null;
 
-  return (
-    <motion.div
-      className="fixed inset-0 z-45 flex items-center justify-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      <motion.div
-        className={panelClasses}
-        initial={
-          layoutMode === 'stack' 
-            ? { y: '100%' }
-            : position === 'left' 
-            ? { x: -400 } 
-            : { x: 400 }
-        }
-        animate={
-          layoutMode === 'stack'
-            ? { y: 0 }
-            : { x: 0 }
-        }
-        exit={
-          layoutMode === 'stack'
-            ? { y: '100%' }
-            : position === 'left'
-            ? { x: -400 }
-            : { x: 400 }
-        }
-        transition={animation.springConfig}
-      >
-        <OrbitalPanel
-          position={position}
-          content={content}
-          conversationProps={conversationProps}
-          astralProps={astralProps}
-          isExpanded={true}
-        />
-        
-        <button
-          className={`absolute ${
-            layoutMode === 'stack' ? 'top-4 right-4' : 
-            position === 'left' ? 'top-4 right-4' : 'top-4 left-4'
-          } p-2 text-gray-400 hover:text-white z-10 bg-gray-900/50 rounded-full backdrop-blur-sm transition-colors`}
-          onClick={onClose}
-          title="Fechar"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </motion.div>
-    </motion.div>
-  );
-};
+// ✅ REMOVIDO: O componente local `ResponsivePanel` e sua interface foram removidos
+// para evitar conflito de animação.
 
 /* -------------------------------------------------------------------------- */
 /* COMPONENTE PRINCIPAL COM SINCRONIZAÇÃO PERFEITA                           */
 /* -------------------------------------------------------------------------- */
 function JarvisPageContent() {
-  /* --------------------------- Estados principais ------------------------- */
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [aiState, setAiState] = useState<ExtendedAIState>("idle");
-  
-  // Estados dos overlays
   const [showConversation, setShowConversation] = useState(false);
   const [showAstralData, setShowAstralData] = useState(false);
-
-  // ✅ NOVO: Estados de sincronização
   const [responseCompleted, setResponseCompleted] = useState(false);
   const [typewriterCompleted, setTypewriterCompleted] = useState(false);
-
   const { toast } = useToast();
-  const { user, profile } = useProfile();
-  const { device, layoutMode } = useResponsive();
+  const { user } = useProfile();
+  const { device } = useResponsive();
 
-  /* --------------------------- Lógica existente --------------------------- */
   const getOrCreateSessionId = useCallback(() => {
     if (!user?.id) return null;
     const key = `jarvis_session_${user.id}`;
@@ -462,13 +409,9 @@ function JarvisPageContent() {
     if (messages.length) persistMessages(messages);
   }, [messages, persistMessages]);
 
-  /* ✅ NOVA LÓGICA: Sincronização de Estados */
-  
-  // ✅ Determinar se interface deve estar limpa (sem distrações)
   const isReadingMode = aiState === "responding" || aiState === "typewriting" || aiState === "contemplating";
   const isInterfaceDisabled = aiState !== "idle" && aiState !== "ready";
   
-  // ✅ Fechar painéis automaticamente quando entrar no modo de leitura
   useEffect(() => {
     if (isReadingMode) {
       setShowConversation(false);
@@ -476,16 +419,12 @@ function JarvisPageContent() {
     }
   }, [isReadingMode]);
   
-  // Callback quando typewriter completa
   const handleTypewriterComplete = useCallback(() => {
     setTypewriterCompleted(true);
     setAiState("contemplating");
     
-    // Pausa contemplativa antes de liberar interação
     setTimeout(() => {
       setAiState("ready");
-      
-      // Mais um momento antes de voltar ao idle
       setTimeout(() => {
         setAiState("idle");
         setResponseCompleted(false);
@@ -494,7 +433,6 @@ function JarvisPageContent() {
     }, 2000);
   }, []);
 
-  /* --------------------------- Handlers ----------------------------------- */
   const createMsg = (sender: "user" | "ai", text: string, error = false): Message => ({
     id: crypto.randomUUID(),
     sender,
@@ -561,7 +499,6 @@ function JarvisPageContent() {
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (isInterfaceDisabled) return;
     
-    // Hotkeys apenas para desktop
     if (device === 'desktop') {
       if (e.key === "c" && e.ctrlKey) {
         e.preventDefault();
@@ -594,20 +531,16 @@ function JarvisPageContent() {
 
   if (!user) return null;
 
-  /* ----------------------------- RENDER ----------------------------------- */
   return (
     <div 
       className="min-h-screen bg-black relative flex flex-col overflow-hidden"
       onKeyDown={onKeyDown}
       tabIndex={0}
     >
-      {/* Background minimalista */}
       <CosmicBackground 
         intensity="low" 
         starCount={device === 'mobile' ? 15 : 25} 
       />
-
-      {/* Indicador de modo de leitura */}
       <AnimatePresence>
         {isReadingMode && (
           <motion.div
@@ -650,8 +583,6 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Avatar do usuário - OCULTO durante leitura */}
       <AnimatePresence>
         {!isReadingMode && (
           <motion.div 
@@ -689,8 +620,6 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Orbe central - responsivo */}
       <div className="flex-1 flex items-center justify-center px-4">
         <ResponsiveOrbContainer>
           <CentralOrb
@@ -699,13 +628,11 @@ function JarvisPageContent() {
             cosmicEnergy={{}}
             messages={messages.map(({ id, text }) => ({ id, text }))}
             aiState={aiState === "ready" ? "idle" : 
-                   (aiState === "typewriting" || aiState === "contemplating") ? "responding" : aiState} // ✅ Mapear estado interno para compatibilidade
+                   (aiState === "typewriting" || aiState === "contemplating") ? "responding" : aiState}
             isLoading={isLoading}
-            onTypewriterComplete={handleTypewriterComplete} // ✅ NOVO: callback
+            onTypewriterComplete={handleTypewriterComplete}
           />
         </ResponsiveOrbContainer>
-        
-        {/* Estado atual sobreposto */}
         {aiState !== "idle" && aiState !== "ready" && (
           <motion.div
             className={`absolute ${device === 'mobile' ? 'mt-32' : 'mt-48'} text-white/80 ${getResponsiveFontSize(device, 'sm')} font-medium`}
@@ -720,8 +647,6 @@ function JarvisPageContent() {
             {aiState === "contemplating" && "Absorva esta sabedoria..."}
           </motion.div>
         )}
-
-        {/* Indicador de retorno da interface */}
         {aiState === "ready" && (
           <motion.div
             className={`absolute ${device === 'mobile' ? 'mt-32' : 'mt-48'} text-white/90 ${getResponsiveFontSize(device, 'sm')} font-medium`}
@@ -737,8 +662,6 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </div>
-
-      {/* Input responsivo - OCULTO durante leitura para foco total */}
       <AnimatePresence>
         {!isReadingMode && (
           <motion.div
@@ -761,35 +684,26 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Painéis responsivos - BLOQUEADOS durante leitura */}
-      <AnimatePresence>
-        {showConversation && !isReadingMode && (
-          <ResponsivePanel
-            position="left"
-            content="conversations"
-            isVisible={showConversation}
-            onClose={handleCloseConversation}
-            conversationProps={{ messages, loading: isLoading, onRetry: handleRetry }}
-          />
-        )}
-
-        {showAstralData && !isReadingMode && (
-          <ResponsivePanel
-            position="right"
-            content="astral-data"
-            isVisible={showAstralData}
-            onClose={handleCloseAstralData}
-          />
-        )}
-      </AnimatePresence>
+      
+      {/* ✅ CORRIGIDO: Chamando OrbitalPanel diretamente */}
+      <OrbitalPanel
+        position="left"
+        content="conversations"
+        isExpanded={showConversation && !isReadingMode}
+        onClose={handleCloseConversation}
+        conversationProps={{ messages, loading: isLoading, onRetry: handleRetry }}
+      />
+      
+      <OrbitalPanel
+        position="right"
+        content="astral-data"
+        isExpanded={showAstralData && !isReadingMode}
+        onClose={handleCloseAstralData}
+      />
     </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* WRAPPER COM PROVIDER                                                       */
-/* -------------------------------------------------------------------------- */
 export default function JarvisPage() {
   return (
     <ResponsiveProvider>
