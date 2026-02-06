@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/contexts/ProfileContext";
-import { sendMessage, generateSessionId } from "@/services/n8nWebhook";
+import { chatApi, ChatMessage } from "@/services/api.service";
 import {
   AlertCircle,
   Loader2,
@@ -23,11 +23,10 @@ import {
   Menu,
   ChevronDown,
 } from "lucide-react";
-import type { WebhookError } from "@/types/webhook";
-import { WebhookErrorType } from "@/types/webhook";
+// WebhookError types removed - using api.service.ts now
 
 // Importar sistema de responsividade
-import { 
+import {
   ResponsiveProvider,
   useResponsive,
   ResponsiveOrbContainer,
@@ -54,11 +53,11 @@ export interface Message {
 }
 
 // Estados expandidos para controle fino
-type ExtendedAIState = 
-  | "idle" 
-  | "listening" 
-  | "thinking" 
-  | "responding" 
+type ExtendedAIState =
+  | "idle"
+  | "listening"
+  | "thinking"
+  | "responding"
   | "typewriting"
   | "contemplating"
   | "ready";
@@ -120,22 +119,20 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
 
   return (
     <motion.div
-      className={`relative flex items-end rounded-2xl border transition-all duration-300 ${
-        disabled 
-          ? 'bg-gray-800/40 border-gray-700/50 opacity-60' 
-          : isActive 
-          ? 'bg-gray-900/60 backdrop-blur-xl border-blue-400/50 shadow-lg shadow-blue-500/10' 
+      className={`relative flex items-end rounded-2xl border transition-all duration-300 ${disabled
+        ? 'bg-gray-800/40 border-gray-700/50 opacity-60'
+        : isActive
+          ? 'bg-gray-900/60 backdrop-blur-xl border-blue-400/50 shadow-lg shadow-blue-500/10'
           : 'bg-gray-900/60 backdrop-blur-xl border-gray-600/30'
-      }`}
+        }`}
       animate={{ scale: isActive && !disabled ? 1.02 : 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
     >
       <div className="flex-1 relative">
         <textarea
           ref={inputRef}
-          className={`w-full bg-transparent text-white placeholder-gray-400 resize-none focus:outline-none transition-all duration-200 ${containerPadding} ${textSize} ${
-            disabled ? 'cursor-not-allowed' : ''
-          }`}
+          className={`w-full bg-transparent text-white placeholder-gray-400 resize-none focus:outline-none transition-all duration-200 ${containerPadding} ${textSize} ${disabled ? 'cursor-not-allowed' : ''
+            }`}
           placeholder={disabled ? "Aguarde a resposta completar..." : placeholder}
           value={value}
           onChange={(e) => !disabled && onChange(e.target.value)}
@@ -145,7 +142,7 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
           maxLength={2000}
           disabled={loading || disabled}
           rows={rows}
-          style={{ 
+          style={{
             minHeight: device === 'mobile' ? '44px' : '56px',
             maxHeight: device === 'mobile' ? '60px' : '96px',
             lineHeight: device === 'mobile' ? '20px' : '24px'
@@ -154,11 +151,10 @@ const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
       </div>
       <div className={`flex items-center ${device === 'mobile' ? 'pr-2 pb-2' : 'pr-3 pb-3'}`}>
         <motion.button
-          className={`${device === 'mobile' ? 'p-2' : 'p-2'} rounded-xl transition-all duration-200 ${
-            canSend
-              ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-              : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-          }`}
+          className={`${device === 'mobile' ? 'p-2' : 'p-2'} rounded-xl transition-all duration-200 ${canSend
+            ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+            : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+            }`}
           onClick={onSend}
           disabled={!canSend}
           whileHover={canSend ? { scale: 1.05 } : {}}
@@ -219,16 +215,14 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
   if (device === 'mobile') {
     return (
       <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
-        <div className={`flex space-x-3 bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-600/30 p-2 shadow-lg transition-opacity duration-300 ${
-          disabled ? 'opacity-50' : 'opacity-100'
-        }`}>
+        <div className={`flex space-x-3 bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-600/30 p-2 shadow-lg transition-opacity duration-300 ${disabled ? 'opacity-50' : 'opacity-100'
+          }`}>
           {/* Botão de Conversa (Mobile) */}
           <motion.button
-            className={`p-3 rounded-xl transition-colors ${
-              conversationActive 
-                ? 'bg-blue-600/80 text-white shadow-lg shadow-blue-500/25' 
-                : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
-            } ${disabled ? 'cursor-not-allowed' : ''}`}
+            className={`p-3 rounded-xl transition-colors ${conversationActive
+              ? 'bg-blue-600/80 text-white shadow-lg shadow-blue-500/25'
+              : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
+              } ${disabled ? 'cursor-not-allowed' : ''}`}
             onClick={() => !disabled && onToggleConversation()}
             disabled={disabled}
             whileHover={!disabled ? { scale: 1.05 } : {}}
@@ -237,14 +231,13 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
           >
             <MessageSquare className="w-5 h-5" />
           </motion.button>
-          
+
           {/* Botão de Energia Astral (Mobile) */}
           <motion.button
-            className={`p-3 rounded-xl transition-colors ${
-              astralDataActive 
-                ? 'bg-purple-600/80 text-white shadow-lg shadow-purple-500/25' 
-                : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
-            } ${disabled ? 'cursor-not-allowed' : ''}`}
+            className={`p-3 rounded-xl transition-colors ${astralDataActive
+              ? 'bg-purple-600/80 text-white shadow-lg shadow-purple-500/25'
+              : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
+              } ${disabled ? 'cursor-not-allowed' : ''}`}
             onClick={() => !disabled && onToggleAstralData()}
             disabled={disabled}
             whileHover={!disabled ? { scale: 1.05 } : {}}
@@ -263,11 +256,10 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
     <div className="relative z-50">
       {/* Botão de Conversação - Esquerda */}
       <motion.button
-        className={`fixed top-6 left-6 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
-          conversationActive 
-            ? 'bg-blue-600/80 text-white shadow-lg shadow-blue-500/25' 
-            : 'bg-gradient-to-br from-blue-600/50 to-cyan-600/50 text-blue-200 border border-blue-400/30 hover:shadow-blue-500/40'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`fixed top-6 left-6 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${conversationActive
+          ? 'bg-blue-600/80 text-white shadow-lg shadow-blue-500/25'
+          : 'bg-gradient-to-br from-blue-600/50 to-cyan-600/50 text-blue-200 border border-blue-400/30 hover:shadow-blue-500/40'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && onToggleConversation()}
         disabled={disabled}
         whileHover={!disabled ? { scale: 1.1, boxShadow: "0 0 20px rgba(59, 130, 246, 0.6)" } : {}}
@@ -275,8 +267,8 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
         animate={{
           scale: [1, 1.05, 1],
           boxShadow: [
-            "0 0 8px rgba(59, 130, 246, 0.3)", 
-            "0 0 16px rgba(59, 130, 246, 0.5)", 
+            "0 0 8px rgba(59, 130, 246, 0.3)",
+            "0 0 16px rgba(59, 130, 246, 0.5)",
             "0 0 8px rgba(59, 130, 246, 0.3)"
           ]
         }}
@@ -292,11 +284,10 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
 
       {/* Botão de Energia Astral - Direita */}
       <motion.button
-        className={`fixed top-6 right-40 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
-          astralDataActive 
-            ? 'bg-purple-600/80 text-white shadow-lg shadow-purple-500/25' 
-            : 'bg-gradient-to-br from-purple-600/50 to-blue-600/50 text-purple-200 border border-purple-400/30 hover:shadow-purple-500/40'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`fixed top-6 right-40 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${astralDataActive
+          ? 'bg-purple-600/80 text-white shadow-lg shadow-purple-500/25'
+          : 'bg-gradient-to-br from-purple-600/50 to-blue-600/50 text-purple-200 border border-purple-400/30 hover:shadow-purple-500/40'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && onToggleAstralData()}
         disabled={disabled}
         whileHover={!disabled ? { scale: 1.1, boxShadow: "0 0 20px rgba(147, 51, 234, 0.6)" } : {}}
@@ -304,8 +295,8 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
         animate={{
           scale: [1, 1.05, 1],
           boxShadow: [
-            "0 0 8px rgba(147, 51, 234, 0.3)", 
-            "0 0 16px rgba(147, 51, 234, 0.5)", 
+            "0 0 8px rgba(147, 51, 234, 0.3)",
+            "0 0 16px rgba(147, 51, 234, 0.5)",
             "0 0 8px rgba(147, 51, 234, 0.3)"
           ]
         }}
@@ -346,7 +337,7 @@ function JarvisPageContent() {
     const key = `jarvis_session_${user.id}`;
     let id = localStorage.getItem(key);
     if (!id) {
-      id = generateSessionId();
+      id = crypto.randomUUID();
       localStorage.setItem(key, id);
     }
     return id;
@@ -379,16 +370,16 @@ function JarvisPageContent() {
   useEffect(() => {
     // Guarda de segurança: só carrega se o user.id estiver presente
     if (!user?.id) return;
-    
+
     // Flag para evitar múltiplos carregamentos para o mesmo usuário
     if (messagesLoadedRef.current === user.id) return;
-    
+
     getOrCreateSessionId();
     const msgs = loadMessages();
     if (msgs.length) {
       setMessages(msgs);
     }
-    
+
     // Marca que já carregou para este usuário
     messagesLoadedRef.current = user.id;
   }, [user?.id, getOrCreateSessionId, loadMessages]);
@@ -399,18 +390,18 @@ function JarvisPageContent() {
 
   const isReadingMode = aiState === "responding" || aiState === "typewriting" || aiState === "contemplating";
   const isInterfaceDisabled = aiState !== "idle" && aiState !== "ready";
-  
+
   useEffect(() => {
     if (isReadingMode) {
       setShowConversation(false);
       setShowAstralData(false);
     }
   }, [isReadingMode]);
-  
+
   const handleTypewriterComplete = useCallback(() => {
     setTypewriterCompleted(true);
     setAiState("contemplating");
-    
+
     setTimeout(() => {
       setAiState("ready");
       setTimeout(() => {
@@ -429,16 +420,7 @@ function JarvisPageContent() {
     error,
   });
 
-  const errorToUserMsg = (e: WebhookError): string => {
-    switch (e.type) {
-      case WebhookErrorType.NETWORK_ERROR:
-        return "Erro de conexão. Verifique sua internet.";
-      case WebhookErrorType.TIMEOUT_ERROR:
-        return "Resposta demorando…";
-      default:
-        return "Problema na comunicação.";
-    }
-  };
+  // Removed obsolete errorToUserMsg function
 
   const handleToggleConversation = useCallback(() => {
     if (isInterfaceDisabled) return;
@@ -464,17 +446,16 @@ function JarvisPageContent() {
     setTypewriterCompleted(false);
 
     try {
-      const resp = await sendMessage(userMsg.text, user);
-      if (!resp.success || !resp.reply?.trim()) throw new Error("Invalid");
-      
-      setMessages((p) => [...p, createMsg("ai", resp.reply)]);
+      // Use new chatApi
+      const profileId = user.id;
+      const resp = await chatApi.sendMessage(profileId, sid, userMsg.text);
+      if (resp.error || !resp.data?.message?.trim()) throw new Error(resp.error || "Invalid");
+
+      setMessages((p) => [...p, createMsg("ai", resp.data.message)]);
       setResponseCompleted(true);
       setAiState("responding");
-      
     } catch (e) {
-      const text = e && typeof e === "object" && "type" in e
-        ? errorToUserMsg(e as WebhookError)
-        : "Erro inesperado.";
+      const text = e instanceof Error ? e.message : "Erro inesperado.";
       setMessages((p) => [...p, createMsg("ai", text, true)]);
       setAiState("idle");
       setResponseCompleted(false);
@@ -486,7 +467,7 @@ function JarvisPageContent() {
 
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (isInterfaceDisabled) return;
-    
+
     if (device === 'desktop') {
       if (e.key === "c" && e.ctrlKey) {
         e.preventDefault();
@@ -520,16 +501,16 @@ function JarvisPageContent() {
   if (!user) return null;
 
   return (
-    <div 
+    <div
       className="min-h-screen bg-black relative flex flex-col overflow-hidden"
       onKeyDown={onKeyDown}
       tabIndex={0}
     >
-      <CosmicBackground 
-        intensity="low" 
-        starCount={device === 'mobile' ? 15 : 25} 
+      <CosmicBackground
+        intensity="low"
+        starCount={device === 'mobile' ? 15 : 25}
       />
-      
+
       {/* ✅ CORREÇÃO 1: Movido para cima no DOM e ajustado z-index para z-30 */}
       {aiState !== "idle" && aiState !== "ready" && (
         <motion.div
@@ -545,7 +526,7 @@ function JarvisPageContent() {
           {aiState === "contemplating" && "Absorva esta sabedoria..."}
         </motion.div>
       )}
-      
+
       <AnimatePresence>
         {isReadingMode && (
           <motion.div
@@ -555,7 +536,7 @@ function JarvisPageContent() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.5 }}
           >
-            <div 
+            <div
               className="px-4 py-2 bg-black/80 backdrop-blur-sm border border-gray-600/30 rounded-full text-xs flex items-center space-x-2"
               style={{
                 color: '#FFFFFF !important',
@@ -570,7 +551,7 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       <AnimatePresence>
         {!isReadingMode && (
           <motion.div
@@ -589,10 +570,10 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       <AnimatePresence>
         {!isReadingMode && (
-          <motion.div 
+          <motion.div
             className="fixed top-6 right-6 z-50"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -627,7 +608,7 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       <div className="flex-1 flex items-center justify-center px-4">
         <ResponsiveOrbContainer>
           <CentralOrb
@@ -635,13 +616,13 @@ function JarvisPageContent() {
             pulseIntensity={isLoading ? 1 : 0.3}
             cosmicEnergy={{}}
             messages={messages.map(({ id, text }) => ({ id, text }))}
-            aiState={aiState === "ready" ? "idle" : 
-                   (aiState === "typewriting" || aiState === "contemplating") ? "responding" : aiState}
+            aiState={aiState === "ready" ? "idle" :
+              (aiState === "typewriting" || aiState === "contemplating") ? "responding" : aiState}
             isLoading={isLoading}
             onTypewriterComplete={handleTypewriterComplete}
           />
         </ResponsiveOrbContainer>
-        
+
         {aiState === "ready" && (
           <motion.div
             className={`absolute ${device === 'mobile' ? 'mt-32' : 'mt-48'} text-white/90 ${getResponsiveFontSize(device, 'sm')} font-medium`}
@@ -657,7 +638,7 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </div>
-      
+
       <AnimatePresence>
         {!isReadingMode && (
           <motion.div
@@ -680,7 +661,7 @@ function JarvisPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       <OrbitalPanel
         position="left"
         content="conversations"
@@ -688,7 +669,7 @@ function JarvisPageContent() {
         onClose={handleCloseConversation}
         conversationProps={{ messages, loading: isLoading, onRetry: handleRetry }}
       />
-      
+
       <OrbitalPanel
         position="right"
         content="astral-data"

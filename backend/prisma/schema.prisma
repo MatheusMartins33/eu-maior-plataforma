@@ -1,0 +1,153 @@
+// This is your Prisma schema file for EU MAIOR
+// Based on the approved architecture: eu_maior_architecture.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+model Profile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique @map("user_id")
+  fullName            String   @map("full_name")
+  
+  // Birth Data (Cosmic Layer)
+  birthDate           DateTime @map("birth_date")
+  birthTime           String   @map("birth_time")
+  birthPlace          String   @map("birth_place")
+  birthCity           String?  @map("birth_city")
+  birthState          String?  @map("birth_state")
+  birthCountry        String?  @map("birth_country")
+  birthTimezone       String?  @map("birth_timezone")
+  birthLatitude       Float?   @map("birth_latitude")
+  birthLongitude      Float?   @map("birth_longitude")
+  
+  // Astrology Raw Data (from API)
+  astroMapRaw         Json?    @map("astro_map_raw")
+  
+  // Psychometric Layer (Big Five answers)
+  psychometricAnswers Json?    @map("psychometric_answers")
+  
+  // Narrative Layer (Open-ended responses)
+  narrativeDecisiveMoment String? @map("narrative_decisive_moment") @db.Text
+  narrativeFrustration    String? @map("narrative_frustration") @db.Text
+  narrativeDream          String? @map("narrative_dream") @db.Text
+  
+  // Higher Self Profile (Final Output)
+  higherSelfProfile   Json?    @map("higher_self_profile")
+  
+  // Processing State
+  processingStatus    ProcessingStatus @default(PENDING) @map("processing_status")
+  processingJobId     String?  @map("processing_job_id")
+  
+  // Timestamps
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  chatMessages        ChatMessage[]
+  processingJobs      ProcessingJob[]
+  mius                Miu[]
+
+  @@map("profiles")
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  profileId   String   @map("profile_id")
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  role        MessageRole
+  content     String   @db.Text
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@index([profileId, createdAt(sort: Desc)])
+  @@map("chat_messages")
+}
+
+model ProcessingJob {
+  id          String   @id @default(uuid())
+  profileId   String   @map("profile_id")
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  status      JobStatus @default(PENDING)
+  currentNode String?  @map("current_node")
+  attempts    Int      @default(0)
+  errorLog    Json?    @map("error_log")
+  
+  // Intermediate Results (for debugging and resume)
+  minerOutput     Json? @map("miner_output")
+  judgeOutput     Json? @map("judge_output")
+  psychoOutput    Json? @map("psycho_output")
+  shadowOutput    Json? @map("shadow_output")
+  synthesizerOutput Json? @map("synthesizer_output")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  
+  @@index([status])
+  @@map("processing_jobs")
+}
+
+// Micro Interpretive Units - fragments extracted by Miner Agent
+model Miu {
+  id            String   @id @default(uuid())
+  profileId     String   @map("profile_id")
+  profile       Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  source        MiuSource
+  rawData       String   @map("raw_data") @db.Text
+  interpretation String  @db.Text
+  confidence    Float
+  isValidated   Boolean  @default(false) @map("is_validated")
+  validationNote String? @map("validation_note")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  @@index([profileId])
+  @@map("mius")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  READY
+  ERROR
+}
+
+enum JobStatus {
+  PENDING
+  MINING
+  JUDGING
+  ANALYZING
+  SHADOW_ANALYSIS
+  SYNTHESIZING
+  COMPLETED
+  FAILED
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+enum MiuSource {
+  COSMIC      // From astrology data
+  PSYCHOMETRIC // From Big Five answers
+  NARRATIVE   // From open-ended responses
+  INTERACTION // From chat history (future)
+}

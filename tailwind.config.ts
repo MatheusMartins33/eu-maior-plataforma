@@ -74,6 +74,16 @@ export default {
         "cosmic-indigo": "#4B0082",
         "cosmic-white": "#F8F8FF",
         "cosmic-gray": "#B0B0B0",
+
+        /* paleta cyberpunk — Dashboard 2026 */
+        "cyber-void": "#050505",
+        "cyber-surface": "#0A0A0F",
+        "cyber-cyan": "#00F0FF",
+        "cyber-purple": "#7000FF",
+        "cyber-red": "#FF2A2A",
+        "cyber-green": "#00FF88",
+        "cyber-gold": "#FFD700",
+        "cyber-text": "#94A3B8",
       },
 
       /* ------------------------------------------------------------------ */
@@ -107,11 +117,21 @@ export default {
           "0%,100%": { opacity: ".8", transform: "scale(1)" },
           "50%": { opacity: "1", transform: "scale(1.05)" },
         },
+        "neon-pulse": {
+          "0%,100%": { boxShadow: "0 0 5px #00F0FF, 0 0 10px #00F0FF" },
+          "50%": { boxShadow: "0 0 20px #00F0FF, 0 0 40px #00F0FF" },
+        },
+        "status-blink": {
+          "0%,100%": { opacity: "1" },
+          "50%": { opacity: "0.5" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "cosmic-pulse": "cosmic-pulse 12s ease-in-out infinite",
+        "neon-pulse": "neon-pulse 2s ease-in-out infinite",
+        "status-blink": "status-blink 1.5s ease-in-out infinite",
       },
     },
   },

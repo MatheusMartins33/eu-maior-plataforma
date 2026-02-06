@@ -11,6 +11,10 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import JarvisPage from "@/pages/JarvisPage";
 import NotFound from "@/pages/NotFound";
 
+// Dashboard pages
+import DashboardLayout from "@/layouts/DashboardLayout";
+import MindViewPage from "@/pages/dashboard/MindViewPage";
+
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthState } from "@/types/auth";
 
@@ -57,14 +61,26 @@ export default function App() {
             }
           />
 
-          <Route
-            path="/jarvis"
+          <Route path="/jarvis"
             element={
               <ProtectedRoute>
                 <JarvisPage />
               </ProtectedRoute>
             }
           />
+
+          {/* Dashboard Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<MindViewPage />} />
+            <Route path="dna" element={<MindViewPage />} />
+          </Route>
 
           <Route path="*" element={<NotFound />} />
         </Routes>
